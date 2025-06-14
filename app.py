@@ -3,39 +3,65 @@ from PIL import Image
 import numpy as np
 import base64
 import io
+import os
 
 app = Flask(__name__)
 
-@app.route('/generate', methods=['POST'])
-def generate():
-    file = request.files['image']
-    image = Image.open(file).convert('1')
-    width, height = image.size
-    share1 = Image.new('1', (width * 2, height * 2))
-    share2 = Image.new('1', (width * 2, height * 2))
-    pixels = image.load()
-    s1_pixels = share1.load()
-    s2_pixels = share2.load()
-    import random
+# --- Utility functions ---
+def create_vc_shares(image):
+    image = image.convert('1')  # Convert to black and white
+    pixels = np.array(image)
+    height, width = pixels.shape
+
+    share1 = np.zeros((height * 2, width * 2), dtype=np.uint8)
+    share2 = np.zeros((height * 2, width * 2), dtype=np.uint8)
+
     for y in range(height):
         for x in range(width):
-            pattern = random.choice([(0,1,1,0),(1,0,0,1)])
-            s1 = pattern
-            s2 = pattern[::-1]
-            for dy in range(2):
-                for dx in range(2):
-                    s1_pixels[x*2+dx, y*2+dy] = s1[dy*2 + dx]
-                    s2_pixels[x*2+dx, y*2+dy] = s2[dy*2 + dx]
+            pixel = pixels[y, x]
+            pattern = np.random.randint(0, 2)
+            if pixel == 0:  # black pixel
+                if pattern == 0:
+                    s1 = np.array([[1, 0], [0, 1]])
+                    s2 = np.array([[0, 1], [1, 0]])
+                else:
+                    s1 = np.array([[0, 1], [1, 0]])
+                    s2 = np.array([[1, 0], [0, 1]])
+            else:  # white pixel
+                if pattern == 0:
+                    s1 = s2 = np.array([[1, 0], [0, 1]])
+                else:
+                    s1 = s2 = np.array([[0, 1], [1, 0]])
 
-    # Convert both to base64
-    s1_buf = io.BytesIO()
-    s2_buf = io.BytesIO()
-    share1.save(s1_buf, format='PNG')
-    share2.save(s2_buf, format='PNG')
+            share1[y*2:y*2+2, x*2:x*2+2] = s1 * 255
+            share2[y*2:y*2+2, x*2:x*2+2] = s2 * 255
+
+    return Image.fromarray(share1), Image.fromarray(share2)
+
+def image_to_base64(image):
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
+
+# --- Routes ---
+@app.route('/generate-vc-shares', methods=['POST'])
+def generate_shares():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided'}), 400
+
+    file = request.files['image']
+    try:
+        image = Image.open(file.stream)
+    except Exception as e:
+        return jsonify({'error': 'Invalid image format'}), 400
+
+    share1, share2 = create_vc_shares(image)
     return jsonify({
-        'share1': base64.b64encode(s1_buf.getvalue()).decode(),
-        'share2': base64.b64encode(s2_buf.getvalue()).decode()
+        'share1': image_to_base64(share1),
+        'share2': image_to_base64(share2)
     })
 
+# --- Entry point for cloud deployment ---
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
