@@ -62,34 +62,46 @@ def generate_shares():
     })
 @app.route('/validate-vc-shares', methods=['POST'])
 def validate():
-    data = request.get_json()
-
-    if 'share1' not in data or 'share2' not in data:
-        return jsonify({'valid': False, 'error': 'Missing shares'})
-
     try:
-        # Decode base64 to image bytes
-        share1_data = base64.b64decode(data['share1'])
-        share2_data = base64.b64decode(data['share2'])
+        data = request.get_json(force=True)  # Ensures JSON parsing
 
-        # Open both images
+        share1_b64 = data.get('share1')
+        share2_b64 = data.get('share2')
+
+        if not share1_b64 or not share2_b64:
+            return jsonify({'valid': False, 'error': 'Missing share1 or share2'}), 400
+
+        # Decode base64
+        share1_data = base64.b64decode(share1_b64)
+        share2_data = base64.b64decode(share2_b64)
+
+        # Convert to images
         img1 = Image.open(io.BytesIO(share1_data)).convert('1')
         img2 = Image.open(io.BytesIO(share2_data)).convert('1')
 
-        # Overlay (logical AND for black pixels)
-        combined = Image.new('1', img1.size)
+        # Ensure images are same size
+        if img1.size != img2.size:
+            return jsonify({'valid': False, 'error': 'Image sizes do not match'}), 400
+
+        # Convert to numpy arrays
         pixels1 = np.array(img1)
         pixels2 = np.array(img2)
+
+        # Bitwise AND
         combined_pixels = np.bitwise_and(pixels1, pixels2)
+
+        # Count black pixels
         black_ratio = np.sum(combined_pixels == 0) / combined_pixels.size
 
-        # You can adjust threshold as needed
+        # Validate based on threshold
         if black_ratio > 0.5:
-            return jsonify({'valid': True})
+            return jsonify({'valid': True, 'black_pixel_ratio': round(black_ratio, 2)})
         else:
-            return jsonify({'valid': False})
+            return jsonify({'valid': False, 'black_pixel_ratio': round(black_ratio, 2)})
+
     except Exception as e:
-        return jsonify({'valid': False, 'error': str(e)})
+        return jsonify({'valid': False, 'error': str(e)}), 500
+
 # --- Entry point for cloud deployment ---
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
