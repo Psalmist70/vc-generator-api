@@ -60,7 +60,36 @@ def generate_shares():
         'share1': image_to_base64(share1),
         'share2': image_to_base64(share2)
     })
+@app.route('/validate-vc-shares', methods=['POST'])
+def validate():
+    data = request.get_json()
 
+    if 'share1' not in data or 'share2' not in data:
+        return jsonify({'valid': False, 'error': 'Missing shares'})
+
+    try:
+        # Decode base64 to image bytes
+        share1_data = base64.b64decode(data['share1'])
+        share2_data = base64.b64decode(data['share2'])
+
+        # Open both images
+        img1 = Image.open(io.BytesIO(share1_data)).convert('1')
+        img2 = Image.open(io.BytesIO(share2_data)).convert('1')
+
+        # Overlay (logical AND for black pixels)
+        combined = Image.new('1', img1.size)
+        pixels1 = np.array(img1)
+        pixels2 = np.array(img2)
+        combined_pixels = np.bitwise_and(pixels1, pixels2)
+        black_ratio = np.sum(combined_pixels == 0) / combined_pixels.size
+
+        # You can adjust threshold as needed
+        if black_ratio > 0.5:
+            return jsonify({'valid': True})
+        else:
+            return jsonify({'valid': False})
+    except Exception as e:
+        return jsonify({'valid': False, 'error': str(e)})
 # --- Entry point for cloud deployment ---
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
