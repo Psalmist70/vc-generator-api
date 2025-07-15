@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from phishing_detection.predict_utils import predict_with_knn, predict_with_cnn
+from phishing_detection.feature_extractor import extract_features_from_url
 from PIL import Image
 import numpy as np
 import base64
