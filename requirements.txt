@@ -2,7 +2,7 @@ Flask
 Pillow
 numpy
 joblib
-tensorflow==2.11.0
 scikit-learn
 Pillow
 opencv-python
+tensorflow==2.11.0
