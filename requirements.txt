@@ -5,4 +5,4 @@ joblib
 scikit-learn
 Pillow
 opencv-python
-tensorflow==2.11.0
+tensorflow==2.16.1
