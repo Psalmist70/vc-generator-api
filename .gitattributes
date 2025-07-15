@@ -1,0 +1,2 @@
+phishing_detection/*.h5 filter=lfs diff=lfs merge=lfs -text
+phishing_detection/*.joblib filter=lfs diff=lfs merge=lfs -text
