@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from phishing_detection.predict_utils import predict_with_knn, predict_with_cnn
 from PIL import Image
 import numpy as np
@@ -7,7 +8,7 @@ import io
 import os
 
 app = Flask(__name__)
-
+CORS(app)  # Allow external PHP/JS to call this API
 # --- Utility functions ---
 def create_vc_shares(image):
     image = image.convert('1')  # Convert to black and white
@@ -115,12 +116,26 @@ def knn_predict():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/predict-knn", methods=["POST"])
+def knn_predict():
+    data = request.get_json(force=True)
+    features = data.get("features")
+    if not features:
+        return jsonify({"error": "No features provided"}), 400
+
+    try:
+        result = predict_with_knn(features)
+        return jsonify({"prediction": result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/predict-cnn", methods=["POST"])
 def cnn_predict():
     if "image" not in request.files:
         return jsonify({"error": "Image file required"}), 400
+
     image = request.files["image"]
-    path = f"temp_image.jpg"
+    path = "temp_image.jpg"
     image.save(path)
 
     try:
@@ -128,6 +143,9 @@ def cnn_predict():
         return jsonify({"prediction": result})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
 
 # --- Entry point for cloud deployment ---
 if __name__ == '__main__':
