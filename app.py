@@ -135,47 +135,38 @@ def cnn_predict():
         if os.path.exists(path):
             os.remove(path)
 
-@app.route('/predict-combined', methods=['POST'])
+@app.route("/predict-combined", methods=["POST"])
 def predict_combined():
+    data = request.get_json()
+    url = data.get("url")
+    if not url:
+        return jsonify({"error": "URL is required"}), 400
+
     try:
-        # Extract and parse KNN features
-        features_str = request.form.get('features')
-        if not features_str:
-            return jsonify({'error': 'KNN features missing'}), 400
+        # Step 1: Extract KNN features from URL
+        from phishing_detection.feature_extractor import extract_features  # You must have this
+        features = extract_features(url)
 
-        features = json.loads(features_str)
-        if len(features) != 30:
-            return jsonify({'error': 'KNN feature count must be 30'}), 400
+        from phishing_detection.predict_utils import predict_with_knn, predict_with_cnn
 
-        knn_result = knn_model.predict([features])[0]
+        knn_result = predict_with_knn(features)
 
-        # Handle image for CNN
-        if 'image' not in request.files:
-            return jsonify({'error': 'CNN image missing'}), 400
+        # Step 2: Screenshot for CNN
+        from phishing_detection.screenshot_util import take_screenshot  # You'll write this
+        screenshot_path = take_screenshot(url)  # Must return saved file path
 
-        image_file = request.files['image']
-        image_path = "temp_image.jpg"
-        image_file.save(image_path)
+        cnn_result = predict_with_cnn(screenshot_path)
 
-        # Preprocess and predict using CNN
-        img = load_img(image_path, target_size=(224, 224))  # adjust size if needed
-        img_array = img_to_array(img)
-        img_array = np.expand_dims(img_array, axis=0) / 255.0
+        # Final decision (simple logic: if either says phishing, then it's phishing)
+        if knn_result == "phishing" or cnn_result == "phishing":
+            verdict = "phishing"
+        else:
+            verdict = "safe"
 
-        cnn_pred = cnn_model.predict(img_array)[0][0]
-        cnn_result = 'phishing' if cnn_pred > 0.5 else 'legitimate'
-
-        # Final verdict
-        final = 'phishing' if knn_result == 'phishing' or cnn_result == 'phishing' else 'legitimate'
-
-        return jsonify({
-            "knn_result": knn_result,
-            "cnn_result": cnn_result,
-            "final_verdict": final
-        })
+        return jsonify({"prediction": verdict})
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 # --- Entry point for cloud deployment ---
 if __name__ == '__main__':
