@@ -135,6 +135,48 @@ def cnn_predict():
         if os.path.exists(path):
             os.remove(path)
 
+@app.route('/predict-combined', methods=['POST'])
+def predict_combined():
+    try:
+        # Extract and parse KNN features
+        features_str = request.form.get('features')
+        if not features_str:
+            return jsonify({'error': 'KNN features missing'}), 400
+
+        features = json.loads(features_str)
+        if len(features) != 30:
+            return jsonify({'error': 'KNN feature count must be 30'}), 400
+
+        knn_result = knn_model.predict([features])[0]
+
+        # Handle image for CNN
+        if 'image' not in request.files:
+            return jsonify({'error': 'CNN image missing'}), 400
+
+        image_file = request.files['image']
+        image_path = "temp_image.jpg"
+        image_file.save(image_path)
+
+        # Preprocess and predict using CNN
+        img = load_img(image_path, target_size=(224, 224))  # adjust size if needed
+        img_array = img_to_array(img)
+        img_array = np.expand_dims(img_array, axis=0) / 255.0
+
+        cnn_pred = cnn_model.predict(img_array)[0][0]
+        cnn_result = 'phishing' if cnn_pred > 0.5 else 'legitimate'
+
+        # Final verdict
+        final = 'phishing' if knn_result == 'phishing' or cnn_result == 'phishing' else 'legitimate'
+
+        return jsonify({
+            "knn_result": knn_result,
+            "cnn_result": cnn_result,
+            "final_verdict": final
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # --- Entry point for cloud deployment ---
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
