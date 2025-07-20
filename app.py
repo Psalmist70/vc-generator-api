@@ -145,37 +145,37 @@ def cnn_predict():
 
 @app.route("/predict-combined", methods=["POST"])
 def predict_combined():
-    data = request.get_json()
-    url = data.get("url")
-    if not url:
-        return jsonify({"error": "URL is required"}), 400
-
     try:
-        # Step 1: Extract KNN features from URL
-        from phishing_detection.feature_extractor import extract_features  # You must have this
+        data = request.get_json(force=True)
+        url = data.get("url")
+        if not url:
+            return jsonify({"error": "No URL provided"}), 400
+
+        # Step 1: Extract features from URL
+        print("Step 1: extracting features...")
+        from phishing_detection.feature_extractor import extract_features
         features = extract_features(url)
 
+        # Step 2: Capture screenshot
+        print("Step 2: taking screenshot...")
+        from phishing_detection.screenshot_util import capture_screenshot
+        screenshot_path = capture_screenshot(url)
+        print(f"Screenshot saved to: {screenshot_path}")
+
+        # Step 3: Predict using KNN and CNN
+        print("Step 3: predicting...")
         from phishing_detection.predict_utils import predict_with_knn, predict_with_cnn
-
         knn_result = predict_with_knn(features)
-
-        # Step 2: Screenshot for CNN
-        from phishing_detection.screenshot_util import take_screenshot  # You'll write this
-        screenshot_path = take_screenshot(url)  # Must return saved file path
-
         cnn_result = predict_with_cnn(screenshot_path)
 
-        # Final decision (simple logic: if either says phishing, then it's phishing)
-        if knn_result == "phishing" or cnn_result == "phishing":
-            verdict = "phishing"
-        else:
-            verdict = "safe"
-
-        return jsonify({"prediction": verdict})
+        return jsonify({
+            "knn_prediction": knn_result,
+            "cnn_prediction": cnn_result
+        })
 
     except Exception as e:
         import traceback
-        traceback.print_exc()
+        traceback.print_exc()  # Log full stack trace
         return jsonify({"error": str(e)}), 500
 
 # --- Entry point for cloud deployment ---
