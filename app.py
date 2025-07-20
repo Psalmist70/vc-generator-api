@@ -167,6 +167,8 @@ def predict_combined():
         return jsonify({"prediction": verdict})
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 # --- Entry point for cloud deployment ---
