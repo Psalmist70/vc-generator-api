@@ -108,13 +108,20 @@ def validate():
 @app.route("/predict-knn", methods=["POST"])
 def knn_predict():
     data = request.get_json(force=True)
-    features = data.get("features")
-    if not features:
-        return jsonify({"error": "No features provided"}), 400
+    url = data.get("url")
+    
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
 
     try:
-        result = predict_with_knn(features)
-        return jsonify({"prediction": result})
+        # Extract features from URL using feature_extractor
+        features = extract_features(url)  # returns list or array
+
+        # Predict using KNN
+        knn_result = predict_with_knn(features)
+
+        return jsonify({"prediction": knn_result})
+    
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
