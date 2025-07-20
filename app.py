@@ -168,6 +168,12 @@ def predict_combined():
         knn_result = predict_with_knn(features)
         cnn_result = predict_with_cnn(screenshot_path)
 
+        # Final decision logic
+        if cnn_result == "legitimate" and knn_result == "legitimate":
+            final_decision = "legitimate"
+        else:
+            final_decision = "phishing"
+
         # Optional: Remove screenshot to free up memory
         if os.path.exists(screenshot_path):
             os.remove(screenshot_path)
@@ -175,6 +181,7 @@ def predict_combined():
         return jsonify({
             "knn_prediction": knn_result,
             "cnn_prediction": cnn_result
+            "final_decision": final_decision
         })
 
     except Exception as e:
