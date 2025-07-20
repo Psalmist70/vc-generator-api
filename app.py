@@ -177,6 +177,9 @@ def predict_combined():
         import traceback
         traceback.print_exc()  # Log full stack trace
         return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
 
 # --- Entry point for cloud deployment ---
 if __name__ == '__main__':
