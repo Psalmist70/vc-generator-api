@@ -180,8 +180,8 @@ def predict_combined():
 
         return jsonify({
             "knn_prediction": knn_result,
-            "cnn_prediction": cnn_result
-            "final_decision": final_decision
+            "cnn_prediction": cnn_result,
+            "Prediction": final_decision
         })
 
     except Exception as e:
