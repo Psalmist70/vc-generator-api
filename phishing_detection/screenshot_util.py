@@ -1,26 +1,31 @@
 # phishing_detection/screenshot_util.py
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-import time
+import requests
 import os
+from datetime import datetime
+
+API_KEY = "VC3FFJY-CNPMBWC-GDVFJHV-F3FQ6Z8"
+API_URL = "https://shot.screenshotapi.net/screenshot"
 
 def take_screenshot(url, filename="cnn_temp.jpg"):
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-dev-shm-usage")
+    params = {
+        "token": API_KEY,
+        "url": url,
+        "output": "image",
+        "file_type": "jpg",
+        "full_page": "true",
+    }
 
-    driver = webdriver.Chrome(options=options)
-
-    try:
-        driver.set_window_size(1280, 800)
-        driver.get(url)
-        time.sleep(3)  # Allow time for full page load
-        path = os.path.join("temp", filename)
+    response = requests.get(API_URL, params=params, stream=True)
+    
+    if response.status_code == 200:
         os.makedirs("temp", exist_ok=True)
-        driver.save_screenshot(path)
+        path = os.path.join("temp", filename)
+        
+        with open(path, 'wb') as f:
+            for chunk in response.iter_content(1024):
+                f.write(chunk)
+        
         return path
-    finally:
-        driver.quit()
+    else:
+        raise Exception(f"Screenshot API failed with status code {response.status_code}")
