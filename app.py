@@ -158,8 +158,8 @@ def predict_combined():
 
         # Step 2: Capture screenshot
         print("Step 2: taking screenshot...")
-        from phishing_detection.screenshot_util import capture_screenshot
-        screenshot_path = capture_screenshot(url)
+        from phishing_detection.screenshot_util import take_screenshot
+        screenshot_path = take_screenshot(url)
         print(f"Screenshot saved to: {screenshot_path}")
 
         # Step 3: Predict using KNN and CNN
@@ -167,6 +167,10 @@ def predict_combined():
         from phishing_detection.predict_utils import predict_with_knn, predict_with_cnn
         knn_result = predict_with_knn(features)
         cnn_result = predict_with_cnn(screenshot_path)
+
+        # Optional: Remove screenshot to free up memory
+        if os.path.exists(screenshot_path):
+            os.remove(screenshot_path)
 
         return jsonify({
             "knn_prediction": knn_result,
@@ -177,9 +181,6 @@ def predict_combined():
         import traceback
         traceback.print_exc()  # Log full stack trace
         return jsonify({"error": str(e)}), 500
-    finally:
-        if os.path.exists(path):
-            os.remove(path)
 
 # --- Entry point for cloud deployment ---
 if __name__ == '__main__':
