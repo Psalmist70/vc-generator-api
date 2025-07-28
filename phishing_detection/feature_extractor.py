@@ -8,10 +8,6 @@ import requests
 from urllib.parse import urlparse
 from datetime import datetime
 
-    """
-    Extracts 30 features from a URL for KNN phishing detection.
-    Returns a list of numeric values representing the features.
-    """
 def has_ip_address(url):
     try:
         ip = socket.gethostbyname(urlparse(url).netloc)
