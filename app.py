@@ -116,7 +116,7 @@ def knn_predict():
     try:
         # Extract features from URL using feature_extractor
         features = extract_features(url)  # returns list or array
-
+        print("Extracted Features:", features)  # <-- Add this line to see the features
         # Predict using KNN
         knn_result = predict_with_knn(features)
 
@@ -124,6 +124,7 @@ def knn_predict():
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+        
 
 @app.route("/predict-cnn", methods=["POST"])
 def cnn_predict():
