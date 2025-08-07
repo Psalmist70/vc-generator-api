@@ -4,7 +4,7 @@ import requests
 import os
 from datetime import datetime
 
-API_KEY = "VC3FFJY-CNPMBWC-GDVFJHV-F3FQ6Z8"
+API_KEY = "80JMRDA-TWQ4MTQ-HS568E2-DJCJ42B"
 API_URL = "https://shot.screenshotapi.net/screenshot"
 
 def take_screenshot(url, filename="cnn_temp.jpg"):
